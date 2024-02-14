@@ -18,11 +18,17 @@ package com.example.waterme.viewmodel
 import android.app.Application
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
+import androidx.work.Data
+import androidx.work.ExistingWorkPolicy
+import androidx.work.OneTimeWorkRequest
+import androidx.work.OneTimeWorkRequestBuilder
 import androidx.work.WorkManager
 import com.example.waterme.data.DataSource
+import com.example.waterme.worker.WaterReminderWorker
+import com.example.waterme.worker.WaterReminderWorker.Companion.nameKey
 import java.util.concurrent.TimeUnit
 
-class PlantViewModel(application: Application): ViewModel() {
+class PlantViewModel(private val application: Application): ViewModel() {
 
     val plants = DataSource.plants
 
@@ -31,17 +37,25 @@ class PlantViewModel(application: Application): ViewModel() {
         unit: TimeUnit,
         plantName: String
     ) {
+
         // TODO: create a Data instance with the plantName passed to it
+        val data = Data.Builder()
+            .putString(nameKey, plantName)
+            .build()
 
         // TODO: Generate a OneTimeWorkRequest with the passed in duration, time unit, and data
         //  instance
-
+        val workRequest = OneTimeWorkRequestBuilder<WaterReminderWorker>()
+            .setInitialDelay(duration, unit)
+            .setInputData(data)
+            .build()
         // TODO: Enqueue the request as a unique work request
+        WorkManager.getInstance(application).enqueueUniqueWork(plantName, ExistingWorkPolicy.REPLACE, workRequest)
     }
 }
 
 class PlantViewModelFactory(private val application: Application) : ViewModelProvider.Factory {
-    override fun <T : ViewModel?> create(modelClass: Class<T>): T {
+    override fun <T : ViewModel> create(modelClass: Class<T>): T {
         return if (modelClass.isAssignableFrom(PlantViewModel::class.java)) {
             PlantViewModel(application) as T
         } else {
